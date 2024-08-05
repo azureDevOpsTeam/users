@@ -1,7 +1,7 @@
 #!/bin/bash
 # Array od Username and passwords
 declare -A users
-users = (
+users=(
   [baran]=Aa123456@
   [laleh]=Aa123456@
   [jaleh]=Aa123456@
