@@ -17,6 +17,7 @@ users=(
   [roya]=Aa123456@
   [arman]=Aa123456@
   [farzad]=Aa123456@
+  [mobina]=Aa123456@
 )
 for username in "${!users[@]}"; do
   sudo useradd -m -s /bin/bash "$username"
