@@ -14,10 +14,10 @@ users=(
   [reza]=Aa123456@
   [zahra]=Aa123456@
   [fatemeh]=Aa123456@
-  [roya]=Aa123456@
   [arman]=Aa123456@
-  [farzad]=Aa123456@
   [mobina]=Aa123456@
+  [kaveh]=Aa123456@
+  [sogand]=Aa123456@
 )
 for username in "${!users[@]}"; do
   sudo useradd -m -s /bin/bash "$username"
