@@ -2,17 +2,40 @@
 
 set -e
 
-# ====== Check root ======
+# ====== Root check ======
 if [ "$EUID" -ne 0 ]; then
   echo "❌ Please run as root (sudo)"
   exit 1
 fi
 
+echo "🔐 Configuring SSH ports..."
+
+SSHCONF="/etc/ssh/sshd_config"
+
+# Backup sshd_config
+cp "$SSHCONF" "${SSHCONF}.bak.$(date +%F_%T)"
+
+# Remove existing Port lines
+sed -i '/^[[:space:]]*Port[[:space:]]/d' "$SSHCONF"
+
+# Add desired ports
+cat <<EOF >> "$SSHCONF"
+
+# Custom SSH ports
+Port 22
+Port 2267
+EOF
+
+# Restart SSH
+sudo systemctl restart sshd
+
+echo "✅ SSH configured to listen on ports 22 and 2267"
+
+# ====== Disable password quality ======
 echo "🔧 Disabling password quality restrictions..."
 
 PWFILE="/etc/security/pwquality.conf"
 
-# Backup pwquality.conf
 cp "$PWFILE" "${PWFILE}.bak.$(date +%F_%T)"
 
 set_or_replace () {
@@ -26,7 +49,6 @@ set_or_replace () {
   fi
 }
 
-# Disable restrictions
 set_or_replace minlen 1
 set_or_replace dcredit 0
 set_or_replace ucredit 0
@@ -37,12 +59,11 @@ set_or_replace dictcheck 0
 set_or_replace usercheck 0
 set_or_replace enforcing 0
 
-# Disable dictionary path
 sed -i 's|^[[:space:]]*dictpath[[:space:]]*=|# dictpath =|g' "$PWFILE"
 
 echo "✅ Password restrictions disabled"
 
-# ====== Users and passwords ======
+# ====== Create users ======
 declare -A users
 users=(
   [baran]=Aa123456@
@@ -75,4 +96,4 @@ for username in "${!users[@]}"; do
   fi
 done
 
-echo "🎉 All done successfully"
+echo "🎉 All tasks completed successfully"
