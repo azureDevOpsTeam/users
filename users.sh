@@ -8,17 +8,18 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+############################
+# 1) SSH CONFIG
+############################
 echo "🔐 Configuring SSH ports..."
 
 SSHCONF="/etc/ssh/sshd_config"
-
-# Backup sshd_config
 cp "$SSHCONF" "${SSHCONF}.bak.$(date +%F_%T)"
 
-# Remove existing Port lines
+# Remove all existing Port directives
 sed -i '/^[[:space:]]*Port[[:space:]]/d' "$SSHCONF"
 
-# Add desired ports
+# Append ports
 cat <<EOF >> "$SSHCONF"
 
 # Custom SSH ports
@@ -26,16 +27,32 @@ Port 22
 Port 2267
 EOF
 
-# Restart SSH
-sudo systemctl restart sshd
+############################
+# 2) UFW CONFIG
+############################
+echo "🔥 Configuring UFW..."
 
-echo "✅ SSH configured to listen on ports 22 and 2267"
+if command -v ufw >/dev/null 2>&1; then
+  ufw allow 22/tcp
+  ufw allow 2267/tcp
+  ufw reload
+  echo "✅ UFW rules updated"
+else
+  echo "⚠️ UFW not installed – skipping firewall config"
+fi
 
-# ====== Disable password quality ======
+############################
+# 3) RESTART SSH
+############################
+echo "🔄 Restarting SSH service..."
+systemctl restart ssh || systemctl restart sshd
+
+############################
+# 4) DISABLE PASSWORD QUALITY
+############################
 echo "🔧 Disabling password quality restrictions..."
 
 PWFILE="/etc/security/pwquality.conf"
-
 cp "$PWFILE" "${PWFILE}.bak.$(date +%F_%T)"
 
 set_or_replace () {
@@ -59,11 +76,14 @@ set_or_replace dictcheck 0
 set_or_replace usercheck 0
 set_or_replace enforcing 0
 
+# Disable dictionary path
 sed -i 's|^[[:space:]]*dictpath[[:space:]]*=|# dictpath =|g' "$PWFILE"
 
-echo "✅ Password restrictions disabled"
+############################
+# 5) USERS
+############################
+echo "👤 Creating or updating users..."
 
-# ====== Create users ======
 declare -A users
 users=(
   [baran]=Aa123456@
@@ -84,16 +104,15 @@ users=(
   [sogand]=Aa123456@
 )
 
-echo "👤 Creating users..."
-
 for username in "${!users[@]}"; do
   if id "$username" &>/dev/null; then
-    echo "⚠️ User $username already exists – skipping"
+    echo "🔁 User $username exists – updating password"
+    echo "${username}:${users[$username]}" | chpasswd
   else
+    echo "➕ Creating user $username"
     useradd -m -s /bin/bash "$username"
     echo "${username}:${users[$username]}" | chpasswd
-    echo "✅ User $username created"
   fi
 done
 
-echo "🎉 All tasks completed successfully"
+echo "🎉 Setup completed successfully"
