@@ -103,6 +103,7 @@ users=(
   [kaveh]=Aa123456@
   [sogand]=Aa123456@
   [sana]=Aa123456@
+  [donya]=Aa123456@
 )
 
 for username in "${!users[@]}"; do
